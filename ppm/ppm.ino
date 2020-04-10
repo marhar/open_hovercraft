@@ -6,9 +6,8 @@ void setup() {
   setup_ppm();
 }
 
-unsigned int junk;
 void loop() {
-  //print_channels(junk++);
-  print_percents(junk++);
+  print_channels(true);
+  //print_percents();
   delay(100);
 }
