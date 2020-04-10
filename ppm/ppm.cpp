@@ -60,8 +60,13 @@ void handle_tick()  {
     current_channel = 0;
     return;
   }
-  if (current_channel < NCHANNELS)
-    channel_times[current_channel++] = diff;
+  if (current_channel < NCHANNELS) {
+    uint32_t tmp;
+    int smooth = 2;
+    tmp = channel_times[current_channel];
+    channel_times[current_channel] = ((tmp * (smooth-1)) + diff)/smooth;  
+  }
+  current_channel++;
 }
 
 void setup_ppm() {
