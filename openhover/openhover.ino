@@ -19,6 +19,10 @@ void setup() {
   s1.attach(9);
   s2.attach(10);
   s3.attach(11);
+
+  s1.write(10);
+  s2.write(10);
+  s3.write(10);
   
 }
 
@@ -26,23 +30,48 @@ void setup() {
 #define PL(x) Serial.println(x)
 #define P2(x) Serial.print('\t'); Serial.print(x)
 #define PL2(x) Serial.print('\t'); Serial.println(x)
-#define PVAR(a,b) P(a);P('\t');PL(b)
+
+#define PV0(a,b) P(a);P(b)
+#define PV(a,b) P('\t'); PV0(a,b)
+#define NL() Serial.print('\n')
 
 void loop() {
-  static int mode;
-
-  /////ppm_get()
+  // input
   mpu.update();
-  delay(100);
-  /*
-    Serial.print(F("ACCEL\t"));Serial.print(mpu.getAccX());
-    Serial.print("\t");Serial.print(mpu.getAccY());
-    Serial.print("\t");Serial.print(mpu.getAccZ());
-  
-    Serial.print(F("\tANGLE\t"));Serial.print(mpu.getAngleX());
-    Serial.print("\t");Serial.print(mpu.getAngleY());
-    Serial.print("\t");Serial.println(mpu.getAngleZ());
-    */
-    PVAR(F("angle:"), mpu.getAngleZ());
-    delay(10);
+  float ang = mpu.getAngleZ();
+  int thr = read_channel_percent(3);
+  int rud = read_channel_percent(4);
+  int mode_switch = read_channel_percent(8);
+
+  // update
+  int m1;
+  int m2;
+  if (mode_switch > 50) {
+    // switch up, manual mode
+    m1 = thr + rud;
+    m2 = thr - rud;
+  }
+  else if (mode_switch > -50) {
+    // switch middle, rate mode (??)
+    m1 = thr + rud;
+    m2 = thr - rud;
+  }
+  else {
+    // switch down, heading mode
+    m1 = thr + rud;
+    m2 = thr - rud;
+  }
+
+  // output
+  s1.write(map(m1, -100, 100, 0, 180));
+  s2.write(map(m2, -100, 100, 0, 180));
+  if (0) {
+    PV0(F("ang:"), ang);
+    PV(F("thr:"), thr);
+    PV(F("rud:"), rud);
+    PV(F("m1:"), m1);
+    PV(F("m2:"), m2);
+    NL();
+  }
+  delay(20);
 }
