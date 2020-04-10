@@ -26,6 +26,7 @@ void setup() {
 #define PL(x) Serial.println(x)
 #define P2(x) Serial.print('\t'); Serial.print(x)
 #define PL2(x) Serial.print('\t'); Serial.println(x)
+#define PVAR(a,b) P(a);P('\t');PL(b)
 
 void loop() {
   static int mode;
@@ -33,6 +34,7 @@ void loop() {
   /////ppm_get()
   mpu.update();
   delay(100);
+  /*
     Serial.print(F("ACCEL\t"));Serial.print(mpu.getAccX());
     Serial.print("\t");Serial.print(mpu.getAccY());
     Serial.print("\t");Serial.print(mpu.getAccZ());
@@ -40,4 +42,7 @@ void loop() {
     Serial.print(F("\tANGLE\t"));Serial.print(mpu.getAngleX());
     Serial.print("\t");Serial.print(mpu.getAngleY());
     Serial.print("\t");Serial.println(mpu.getAngleZ());
+    */
+    PVAR(F("angle:"), mpu.getAngleZ());
+    delay(10);
 }
