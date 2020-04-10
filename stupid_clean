@@ -1,0 +1,4 @@
+# stupid hack to get around arduino env weirdnesses
+rm -f mixer/ppm.{cpp,h}
+rm -f openhover/ppm.{cpp,h}
+rm -f openhover/imu.{cpp,h}
