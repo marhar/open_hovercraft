@@ -35,6 +35,15 @@ void setup() {
 #define PV(a,b) P('\t'); PV0(a,b)
 #define NL() Serial.print('\n')
 
+/////////////////////// PID stuff
+float pVal = 0;
+float iVal = 0;
+float dVal = 0;
+float target = 0;
+float cumError;
+float maxCorr;
+float minCorr;
+
 void loop() {
   // input
   mpu.update();
@@ -53,11 +62,13 @@ void loop() {
   }
   else if (mode_switch > -50) {
     // switch middle, rate mode (??)
+    goto heading_mode;
     m1 = thr + rud;
     m2 = thr - rud;
   }
   else {
     // switch down, heading mode
+    heading_mode:
     m1 = thr + rud;
     m2 = thr - rud;
   }
@@ -65,7 +76,7 @@ void loop() {
   // output
   s1.write(map(m1, -100, 100, 0, 180));
   s2.write(map(m2, -100, 100, 0, 180));
-  if (0) {
+  if (1) {
     PV0(F("ang:"), ang);
     PV(F("thr:"), thr);
     PV(F("rud:"), rud);
@@ -73,5 +84,40 @@ void loop() {
     PV(F("m2:"), m2);
     NL();
   }
-  delay(20);
+  delay(100);
 }
+
+
+/*
+pVal * current_error
+
+pVal
+iVal
+dVal
+terget
+cumErr
+maxCorr = 100% power
+minCorr = 15% power
+target = 100   set point
+loop
+  read currVal
+  err = target - currVal
+  
+  pCorrection = pVal * error
+  
+  cumError += error
+  iCorr = iVal * cumError
+  
+  slope = error - lastErr
+  dCorr = dVal * slope
+  lastErr = err
+
+  corr = pCorr + iCorr + dCorr
+  if (corr > maxCorr) corr = maxCorr
+  if (corr < minCorr) corr = minCorr
+
+  emit(correction)
+  
+
+
+*/
