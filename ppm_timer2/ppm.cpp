@@ -5,8 +5,9 @@
 uint32_t mymicros() {
   if (read_channel_percent(8) < -25)
     return micros();
+  else if (read_channel_percent(8) < 25)
+    return timer2.get_count() / 2;
   else
-    //return timer2.get_count() * 2;
     return (uint32_t)timer2.get_micros();
 }
 
