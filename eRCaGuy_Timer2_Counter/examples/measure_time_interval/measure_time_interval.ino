@@ -74,27 +74,14 @@ void loop() {
   unsigned long t_elapsed2_ul = (t_end2 - t_start2)/2; //us; to a precision of 1us, due to using unsigned long data type truncation, using Timer2 count
   float t_elapsed2_fl = (t_end2 - t_start2)/2.0; //us; to a precision of 0.5us, due to using float data type for final time difference calc; note that I divide by 2.0, NOT 2
   float t_elapsed3 = t_end3 - t_start3; //us; to a precision of 0.5us
-  
+
+  #define P(x) Serial.print(x)
+  #define PF(x) P(F(x))
   //Display the results
-  Serial.println(""); //insert a space
-  Serial.print(F("elapsed time using micros() = "));
-  Serial.print(t_elapsed1);
-  Serial.println(F("us"));
-  Serial.print(F("elapsed time using get_count() with unsigned long final data type = "));
-  Serial.print(t_elapsed2_ul);
-  Serial.println(F("us"));
-  Serial.print(F("elapsed time using get_count() with float final data type = "));
-  Serial.print(t_elapsed2_fl);
-  Serial.println(F("us"));
-  Serial.print(F("elapsed time using get_micros() = "));
-  Serial.print(t_elapsed3);
-  Serial.println(F("us"));
-  
-  //Wait a second before repeating
-  delay(1000); 
+
+  PF("micros:");       P(1000+10*t_elapsed1);    P('\t');
+  PF("get_count_ul:"); P(2000+10*t_elapsed2_ul); P('\t');
+  PF("get_count_fl:"); P(3000+10*t_elapsed2_fl); P('\t');
+  PF("get_micros:");   P(4000+10*t_elapsed3);    P('\n');
+  delay(100); 
 }
-
-
-
-
-
