@@ -1,4 +1,5 @@
 # stupid hack to get around arduino env weirdnesses
 cp ppm/ppm.{cpp,h} mixer
 cp ppm/ppm.{cpp,h} openhover
+cp ppm/ppm.{cpp,h} esc_tuner
 cp imu/imu.{cpp,h} openhover
