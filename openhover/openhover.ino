@@ -54,7 +54,7 @@ int switchpos(int val) {
 
 // output a value in plotter-compatible format. usage: MON("x:", x);
 #define P(x) Serial.print(x)
-#define MON(n, v) P('\t'); P(F(n)); P(v);
+#define MON(n, v) P(' '); P(F(n)); P(v);
 #define NL() P('\n')
 
 /////////////////////// PID stuff
@@ -74,13 +74,16 @@ float minCorr;
 #define MODE_HEADING_HOLD 2
 #define MODE_RATES 3 // ???
 
+float old_angle;
+float target_angle = 0.0;
+
 void loop() {
   // TODO: more precise loop control
   int mode;
   mpu.update();
-  float ang = mpu.getAngleZ();
+  float angle = mpu.getAngleZ();
   int thr = read_channel_percent(THR_CHANNEL);
-  int rud = read_channel_percent(RUD_CHANNEL);
+  int rud = read_channel_percent(RUD_CHANNEL) / 10; // low rates!
   int mode_switch = read_channel_percent(MODE_CHANNEL);
   if (mode_switch > 50)
     mode = MODE_MANUAL;
@@ -100,23 +103,41 @@ void loop() {
     m2 = thr - rud;
   }
   else if (mode == MODE_RATES) {
-    // switch middle
-    goto heading_mode;
+    goto heading_mode; // for now just treat as heading mode
     m1 = thr + rud;
     m2 = thr - rud;
   }
   else { // mode == MODE_HEADING_HOLD
-    // switch up
+
+    // TODO: when initialized, dont do anything until THR stick down
     heading_mode:
-    m1 = thr + rud;
-    m2 = thr - rud;
+    static float pVal = .1;
+    float err = target_angle - angle;
+    float pCorrection = pVal * err;
+
+    float correction = pCorrection;
+    
+    MON("oang:", old_angle);
+    MON("ang:", angle);
+    MON("tar:", target_angle);
+    MON("err:", err);
+    MON("pcor:", pCorrection);
+    MON("corr:", correction);
+    
+    m1 = thr + rud - correction;
+    m2 = thr - rud + correction;
+
+    if (thr < -98) {
+      // if throttle off, lets reset some stuff
+      m1 = m2 = -100;  // force motors off
+      target = angle;  // set new target angle
+    }
   }
 
   // output
   x_lmotor(map(m1, -100, 100, MIN_SERVO, MAX_SERVO));
   x_rmotor(map(m2, -100, 100, MIN_SERVO, MAX_SERVO));
   if (1) {
-    MON("ang:", ang);
     MON("thr:", thr);
     MON("rud:", rud);
     MON("m1:", m1);
@@ -125,6 +146,7 @@ void loop() {
     delay(70);
   }
   delay(30);
+  old_angle = angle;
 }
 
 
