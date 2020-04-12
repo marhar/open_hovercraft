@@ -9,27 +9,43 @@ Servo s_lifter;
 Servo s_lmonitor;
 Servo s_rmonitor;
 
-void x_lmotor(int x) { s_lmotor.write(x); s_lmonitor.write(x); }
-void x_rmotor(int x) { s_rmotor.write(x); s_rmonitor.write(x); }
-void x_lifter(int x) { s_lifter.write(x); }
+#define MIN_SERVO 1000
+#define MAX_SERVO 2000
+
+void setmotor(Servo &s, int v, int reverse=0) {
+  if (v < MIN_SERVO)
+    v = MIN_SERVO;
+  else if (v > MAX_SERVO)
+    v = MAX_SERVO;
+  //if (reverse)
+  //  v = MAX_SERVO - v;
+  s.write(v);
+}
+
+void x_lmotor(int x) { setmotor(s_lmotor,x); setmotor(s_lmonitor, x, 1); }
+void x_rmotor(int x) { setmotor(s_rmotor,x); setmotor(s_rmonitor, x); }
+void x_lifter(int x) { setmotor(s_lifter,x); }
 
 void setup() {
   Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
+
+  // Turn on blue LED while in setup.
   digitalWrite(LED_BUILTIN, HIGH);
-  setup_imu();
   setup_ppm();
   //setup_servo();
   digitalWrite(LED_BUILTIN, LOW);
 
   s_lmotor.attach(3);
   s_rmotor.attach(9);
-  s_lifter.attach(10);
-  s_lmonitor.attach(11);
+  s_lmonitor.attach(A1);
+  s_rmonitor.attach(A2);
+    s_lifter.attach(10);
 
   x_lmotor(0);
   x_rmotor(0);
   x_lifter(0);
+  setup_imu();
 }
 
 // output a value in plotter-compatible format. usage: MON("x:", x);
@@ -81,8 +97,8 @@ void loop() {
   }
 
   // output
-  x_lmotor(map(m1, -100, 100, 0, 180));
-  x_rmotor(map(m2, -100, 100, 0, 180));
+  x_lmotor(map(m1, -100, 100, MIN_SERVO, MAX_SERVO));
+  x_rmotor(map(m2, -100, 100, MIN_SERVO, MAX_SERVO));
   if (1) {
     MON("ang:", ang);
     MON("thr:", thr);

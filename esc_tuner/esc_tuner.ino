@@ -8,14 +8,14 @@ Servo s_rmotor;
 Servo s_lmonitor;
 Servo s_rmonitor;
 
-#define MINSERVO 1000
-#define MAXSERVO 2000
+#define MIN_SERVO 1000
+#define MAX_SERVO 2000
 
 void setmotor(Servo &s, int v) {
-  if (v < MINSERVO)
-    s.write(MINSERVO);
-  else if (v > MAXSERVO)
-    s.write(MAXSERVO);
+  if (v < MIN_SERVO)
+    s.write(MIN_SERVO);
+  else if (v > MAX_SERVO)
+    s.write(MAX_SERVO);
   else
     s.write(v);
 }
