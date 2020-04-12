@@ -25,6 +25,8 @@ void x_rmotor(int x) { setmotor(s_rmotor,x); setmotor(s_rmonitor, x); }
 
 void setup() {
   Serial.begin(115200);
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
   setup_ppm();
 
   s_lmotor.attach(3);
@@ -32,8 +34,9 @@ void setup() {
   s_lmonitor.attach(A1);
   s_rmonitor.attach(A2);
 
-  x_lmotor(0);
-  x_rmotor(0);
+  x_lmotor(MIN_SERVO);
+  x_rmotor(MIN_SERVO);
+  digitalWrite(LED_BUILTIN, LOW);
 }
 
 // output a value in plotter-compatible format. usage: MON("x:", x);
@@ -43,11 +46,11 @@ void setup() {
 #define THR_CHAN 3
 void loop() {
   int thr = read_channel_time(THR_CHAN);
-  x_lmotor(thr);
-  x_rmotor(thr);
   if (1) {
     MON("thr:", thr);
     P('\n');
   }
+  x_lmotor(thr);
+  x_rmotor(thr);
   delay(100);
 }

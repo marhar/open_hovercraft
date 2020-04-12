@@ -48,15 +48,14 @@ void setup() {
   setup_imu();
 }
 
+int switchpos(int val) {
+  return 0;
+}
+
 // output a value in plotter-compatible format. usage: MON("x:", x);
 #define P(x) Serial.print(x)
 #define MON(n, v) P('\t'); P(F(n)); P(v);
 #define NL() P('\n')
-
-// junk below?
-#define PL(x) Serial.println(x)
-#define P2(x) Serial.print('\t'); Serial.print(x)
-#define PL2(x) Serial.print('\t'); Serial.println(x)
 
 /////////////////////// PID stuff
 float pVal = 0;
@@ -67,30 +66,47 @@ float cumError;
 float maxCorr;
 float minCorr;
 
+#define THR_CHANNEL 3
+#define RUD_CHANNEL 4
+#define MODE_CHANNEL 8
+
+#define MODE_MANUAL 1
+#define MODE_HEADING_HOLD 2
+#define MODE_RATES 3 // ???
+
 void loop() {
-  // input
+  // TODO: more precise loop control
+  int mode;
   mpu.update();
   float ang = mpu.getAngleZ();
-  int thr = read_channel_percent(3);
-  int rud = read_channel_percent(4);
-  int mode_switch = read_channel_percent(8);
+  int thr = read_channel_percent(THR_CHANNEL);
+  int rud = read_channel_percent(RUD_CHANNEL);
+  int mode_switch = read_channel_percent(MODE_CHANNEL);
+  if (mode_switch > 50)
+    mode = MODE_MANUAL;
+  else if (mode_switch > -50)
+    mode = MODE_RATES;
+  else
+    mode = MODE_HEADING_HOLD;
+    
 
   // update
   int m1;
   int m2;
-  if (mode_switch > 50) {
-    // switch up, manual mode
+  // TODO: macroize switch position
+  if (mode == MODE_MANUAL) {
+    // switch down
     m1 = thr + rud;
     m2 = thr - rud;
   }
-  else if (mode_switch > -50) {
-    // switch middle, rate mode (??)
+  else if (mode == MODE_RATES) {
+    // switch middle
     goto heading_mode;
     m1 = thr + rud;
     m2 = thr - rud;
   }
-  else {
-    // switch down, heading mode
+  else { // mode == MODE_HEADING_HOLD
+    // switch up
     heading_mode:
     m1 = thr + rud;
     m2 = thr - rud;
@@ -105,9 +121,10 @@ void loop() {
     MON("rud:", rud);
     MON("m1:", m1);
     MON("m2:", m2);
-    NL();
+    P('\n');
+    delay(70);
   }
-  delay(100);
+  delay(30);
 }
 
 
