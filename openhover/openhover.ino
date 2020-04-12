@@ -1,5 +1,6 @@
 // OpenHover
 #include <Servo.h>
+
 #include "imu.h"
 #include "ppm.h"
 
@@ -48,23 +49,21 @@ void setup() {
   setup_imu();
 }
 
-int switchpos(int val) {
-  return 0;
+enum { SWITCH_UP = 1, SWITCH_MIDDLE, SWITCH_DOWN };
+
+int switch_position(int percentage) {
+  if (percentage > 50)
+    return SWITCH_DOWN;
+  else if (percentage > -50)
+    return SWITCH_MIDDLE;
+  else
+    return SWITCH_UP;
 }
 
 // output a value in plotter-compatible format. usage: MON("x:", x);
 #define P(x) Serial.print(x)
 #define MON(n, v) P(' '); P(F(n)); P(v);
-#define NL() P('\n')
 
-/////////////////////// PID stuff
-float pVal = 0;
-float iVal = 0;
-float dVal = 0;
-float target = 0;
-float cumError;
-float maxCorr;
-float minCorr;
 
 #define THR_CHANNEL 3
 #define RUD_CHANNEL 4
@@ -77,76 +76,91 @@ float minCorr;
 float old_angle;
 float target_angle = 0.0;
 
+#define LOOP_HERTZ 50
 void loop() {
   // TODO: more precise loop control
+  uint32_t now = micros;
+  uint32_t wait_until = now + 1000000/LOOP_HERTZ;
   int mode;
   mpu.update();
-  float angle = mpu.getAngleZ();
-  int thr = read_channel_percent(THR_CHANNEL);
-  int rud = read_channel_percent(RUD_CHANNEL) / 10; // low rates!
-  int mode_switch = read_channel_percent(MODE_CHANNEL);
-  if (mode_switch > 50)
-    mode = MODE_MANUAL;
-  else if (mode_switch > -50)
-    mode = MODE_RATES;
-  else
-    mode = MODE_HEADING_HOLD;
-    
+  float current_angle = mpu.getAngleZ();
+  float thr = read_channel_percent(THR_CHANNEL);
+  float rud = read_channel_percent(RUD_CHANNEL) / 10.0; // low rates!
+  float mode_switch = read_channel_percent(MODE_CHANNEL);
 
-  // update
+  switch (switch_position(read_channel_percent(MODE_CHANNEL))) {
+    case SWITCH_UP:
+      mode = MODE_HEADING_HOLD;
+      break;
+    case SWITCH_MIDDLE:
+      //mode = MODE_RATES;
+      mode = MODE_HEADING_HOLD;
+      break;
+    case SWITCH_DOWN:
+      mode = MODE_MANUAL;
+      break;
+  }
+
   int m1;
   int m2;
-  // TODO: macroize switch position
   if (mode == MODE_MANUAL) {
-    // switch down
     m1 = thr + rud;
     m2 = thr - rud;
   }
   else if (mode == MODE_RATES) {
     goto heading_mode; // for now just treat as heading mode
-    m1 = thr + rud;
-    m2 = thr - rud;
   }
   else { // mode == MODE_HEADING_HOLD
-
     // TODO: when initialized, dont do anything until THR stick down
     heading_mode:
-    static float pVal = .1;
-    float err = target_angle - angle;
-    float pCorrection = pVal * err;
+    static float pCoefficient = .2;
+    static float dCoefficient = .02;
+    static float accumulated_error = 0;
+    float err = target_angle - current_angle;
+    if (abs(err) > 1.0)
+      accumulated_error += err;
+    float pCorrection = pCoefficient * err;
+    float dCorrection = dCoefficient * accumulated_error;
 
-    float correction = pCorrection;
+    float total_correction = pCorrection + dCorrection;
+
+    float motor_delta = total_correction;
     
-    MON("oang:", old_angle);
-    MON("ang:", angle);
+    m1 = thr + rud - motor_delta/2;
+    m2 = thr - rud + motor_delta/2;
+
+    static int pcount;
+    pcount++;
+    if (pcount > 10) {
+    pcount = 0;
     MON("tar:", target_angle);
+    MON("ang:", current_angle);
     MON("err:", err);
     MON("pcor:", pCorrection);
-    MON("corr:", correction);
-    
-    m1 = thr + rud - correction;
-    m2 = thr - rud + correction;
+    MON("dcor:", dCorrection);
+    MON("accum:", accumulated_error);
+    MON("tcor:", total_correction);
+    MON("del:", motor_delta);
+    MON("m1:", m1);
+    MON("m2:", m2);
+    Serial.println("");
+    delay(50);
+    }
 
     if (thr < -98) {
       // if throttle off, lets reset some stuff
       m1 = m2 = -100;  // force motors off
-      target = angle;  // set new target angle
+      target_angle = current_angle;  // set new target angle
+      accumulated_error = 0;
     }
   }
 
-  // output
   x_lmotor(map(m1, -100, 100, MIN_SERVO, MAX_SERVO));
   x_rmotor(map(m2, -100, 100, MIN_SERVO, MAX_SERVO));
-  if (1) {
-    MON("thr:", thr);
-    MON("rud:", rud);
-    MON("m1:", m1);
-    MON("m2:", m2);
-    P('\n');
-    delay(70);
-  }
-  delay(30);
-  old_angle = angle;
+  // TODO: change this into a simple loop that doesn't return
+  old_angle = current_angle;
+  while (micros() < wait_until)
+    ;
 }
 
 
@@ -179,7 +193,4 @@ loop
   if (corr < minCorr) corr = minCorr
 
   emit(correction)
-  
-
-
 */
