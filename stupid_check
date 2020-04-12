@@ -1,0 +1,12 @@
+# stupid hack to get around arduino env weirdnesses
+a="
+ mixer/ppm.{cpp,h}
+ openhover/ppm.{cpp,h}
+ openhover/imu.{cpp,h}
+ esc_tuner/ppm.{cpp,h}
+"
+
+trap "rm -f /tmp/junk.$$" 0
+find . -type f -print0|xargs -0 md5sum|grep -v ' \./\.git/'|awk '{print $1}'|sort |uniq -d >/tmp/junk.$$
+find . -type f -print0|xargs -0 md5sum|sort |grep -f /tmp/junk.$$
+
