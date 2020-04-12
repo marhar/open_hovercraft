@@ -3,9 +3,15 @@
 #include "imu.h"
 #include "ppm.h"
 
-Servo s1;
-Servo s2;
-Servo s3;
+Servo s_lmotor;
+Servo s_rmotor;
+Servo s_lifter;
+Servo s_lmonitor;
+Servo s_rmonitor;
+
+void x_lmotor(int x) { s_lmotor.write(x); s_lmonitor.write(x); }
+void x_rmotor(int x) { s_rmotor.write(x); s_rmonitor.write(x); }
+void x_lifter(int x) { s_lifter.write(x); }
 
 void setup() {
   Serial.begin(115200);
@@ -16,24 +22,25 @@ void setup() {
   //setup_servo();
   digitalWrite(LED_BUILTIN, LOW);
 
-  s1.attach(9);
-  s2.attach(10);
-  s3.attach(11);
+  s_lmotor.attach(3);
+  s_rmotor.attach(9);
+  s_lifter.attach(10);
+  s_lmonitor.attach(11);
 
-  s1.write(10);
-  s2.write(10);
-  s3.write(10);
-  
+  x_lmotor(0);
+  x_rmotor(0);
+  x_lifter(0);
 }
 
+// output a value in plotter-compatible format. usage: MON("x:", x);
 #define P(x) Serial.print(x)
+#define MON(n, v) P('\t'); P(F(n)); P(v);
+#define NL() P('\n')
+
+// junk below?
 #define PL(x) Serial.println(x)
 #define P2(x) Serial.print('\t'); Serial.print(x)
 #define PL2(x) Serial.print('\t'); Serial.println(x)
-
-#define PV0(a,b) P(a);P(b)
-#define PV(a,b) P('\t'); PV0(a,b)
-#define NL() Serial.print('\n')
 
 /////////////////////// PID stuff
 float pVal = 0;
@@ -74,14 +81,14 @@ void loop() {
   }
 
   // output
-  s1.write(map(m1, -100, 100, 0, 180));
-  s2.write(map(m2, -100, 100, 0, 180));
+  x_lmotor(map(m1, -100, 100, 0, 180));
+  x_rmotor(map(m2, -100, 100, 0, 180));
   if (1) {
-    PV0(F("ang:"), ang);
-    PV(F("thr:"), thr);
-    PV(F("rud:"), rud);
-    PV(F("m1:"), m1);
-    PV(F("m2:"), m2);
+    MON("ang:", ang);
+    MON("thr:", thr);
+    MON("rud:", rud);
+    MON("m1:", m1);
+    MON("m2:", m2);
     NL();
   }
   delay(100);

@@ -70,9 +70,9 @@ void handle_tick()  {
 }
 
 void setup_ppm() {
-  // start off with everything in a mid-position
+  // start off with everything in a low-position
   for (int i = 0; i < NCHANNELS; ++i)
-      channel_times[i] = 1500;
+      channel_times[i] = 1000;
   last_tick = micros();
   delay(10);
   pinMode(2, INPUT_PULLUP);
