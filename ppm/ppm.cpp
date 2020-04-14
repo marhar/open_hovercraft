@@ -17,18 +17,6 @@ int read_channel_percent(int channel_num) {
   return map(v, MIN_TIME, MAX_TIME, -100, 100);
 }
 
-void print_percents(void) {
-  for (int i = 1; i <= NCHANNELS; ++i) {
-    Serial.print(F("ch"));
-    Serial.print(i);
-    Serial.print(F(":"));
-    Serial.print(read_channel_percent(i));
-    Serial.print(F("\t"));
-  }
-  Serial.print('\n');
-}
-
-
 void print_channels(bool as_percents = false) {
   for (int i = 1; i <= NCHANNELS; ++i) {
     Serial.print(F("ch"));
