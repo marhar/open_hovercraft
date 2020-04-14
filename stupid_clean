@@ -1,5 +1,8 @@
 # stupid hack to get around arduino env weirdnesses
-rm -f mixer/ppm.{cpp,h}
-rm -f openhover/ppm.{cpp,h}
-rm -f openhover/imu.{cpp,h}
 rm -f esc_tuner/ppm.{cpp,h}
+rm -f imu/tiny_kalman.h
+rm -f mixer/ppm.{cpp,h}
+rm -f openhover/imu.{cpp,h}
+rm -f openhover/ppm.{cpp,h}
+rm -f openhover/tiny_kalman.h
+rm -f ppm/tiny_kalman.h
