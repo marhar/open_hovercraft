@@ -76,6 +76,10 @@ int switch_position(int percentage) {
 float old_angle;
 float target_angle = 0.0;
 
+float smooth(float x, float new_x, int nsamples) {
+  return (x * (nsamples - 1.0) + new_x) / (float)nsamples;
+}
+
 #define LOOP_HERTZ 50
 void loop() {
   // TODO: more precise loop control
@@ -83,7 +87,12 @@ void loop() {
   uint32_t wait_until = now + 1000000/LOOP_HERTZ;
   int mode;
   mpu.update();
-  float current_angle = mpu.getAngleZ();
+  static float current_angle;
+  float raw_angle = mpu.getAngleZ();
+  current_angle = smooth(current_angle, raw_angle, 10);
+
+  
+  
   float thr = read_channel_percent(THR_CHANNEL);
   float rud = read_channel_percent(RUD_CHANNEL) / 10.0; // low rates!
   float mode_switch = read_channel_percent(MODE_CHANNEL);
@@ -133,16 +142,16 @@ void loop() {
     pcount++;
     if (pcount > 10) {
     pcount = 0;
-    MON("tar:", target_angle);
-    MON("ang:", current_angle);
-    MON("err:", err);
-    MON("pcor:", pCorrection);
-    MON("dcor:", dCorrection);
-    MON("accum:", accumulated_error);
-    MON("tcor:", total_correction);
-    MON("del:", motor_delta);
-    MON("m1:", m1);
-    MON("m2:", m2);
+    //MON("tar:", target_angle);
+    MON("ang:", current_angle*10);
+    //MON("err:", err);
+    //MON("pcor:", pCorrection);
+    //MON("dcor:", dCorrection);
+    //MON("accum:", accumulated_error);
+    //MON("tcor:", total_correction);
+    //MON("del:", motor_delta);
+    //MON("m1:", m1);
+    //MON("m2:", m2);
     Serial.println("");
     delay(50);
     }
