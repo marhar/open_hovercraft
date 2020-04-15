@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "imu.h"
+#include "tiny_kalman.h"
 
 
 #include "Wire.h"
@@ -8,22 +9,35 @@
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
-  Serial.begin(115200);
+  Serial.begin(9600);
   setup_imu();
   digitalWrite(LED_BUILTIN, LOW);
   
 }
 
+SimpleKalmanFilter myfilter(2, 2, 0.9);
+
 #define P(x) Serial.print(x)
-#define PL(x) Serial.println(x)
+
+#ifndef NO_MONITOR
+#define MONITOR(v) Serial.print(F(" " #v ":")); Serial.print(v)
+#define MONITOR2(n, v) Serial.print(F(" " n ":")); Serial.print(v)
+#define MONITOR_END Serial.println()
+#endif
+
+float estimated_az = 0;
 void loop() {
+  float az = mpu.getAngleZ();
+  estimated_az = myfilter.updateEstimate(az);
   mpu.update();
   delay(100);
-  P(F("ACCEL\t"));P(mpu.getAccX());
-  P(F("\t"));P(mpu.getAccY());
-  P(F("\t"));P(mpu.getAccZ());
-  P(F("\tANGLE\t"));P(mpu.getAngleX());
-  P(F("\t"));P(mpu.getAngleY());
-  P(F("\t"));PL(mpu.getAngleZ());
+  //MONITOR("ACCEL\t"));P(mpu.getAccX());
+  //MONITOR("\t"));P(mpu.getAccY());
+  //MONITOR("\t"));P(mpu.getAccZ());
+  //MONITOR("\tANGLE\t"));P(mpu.getAngleX());
+  //MONITOR("\t"));P(mpu.getAngleY());
+  //MONITOR("\t"));PL(mpu.getAngleZ());
+  MONITOR(az);
+  MONITOR(estimated_az);
+  Serial.println();
 }
-
