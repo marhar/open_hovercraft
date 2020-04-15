@@ -67,9 +67,7 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
 
-  Serial.begin(115200);
-  setup_imu();
-  setup_ppm();
+  Serial.begin(9600);
   //setup_servo();
   s_lmotor.attach(3);
   s_rmotor.attach(9);
@@ -79,6 +77,8 @@ void setup() {
   x_lmotor(0);
   x_rmotor(0);
   x_lifter(0);
+  setup_ppm();
+  setup_imu();
   digitalWrite(LED_BUILTIN, LOW);
 }
 
@@ -86,7 +86,7 @@ void setup() {
 // loop() persistent data
 
 float target_angle = 0.0;
-SimpleKalmanFilter gyroz_filter(2, 2, 0.01);
+SimpleKalmanFilter gyroz_filter(2, 2, 0.15);
 
 // TODO: move all vars out or in
 
@@ -100,9 +100,13 @@ void loop() {
   float thr = read_channel_percent(THR_CHANNEL);
   float rud = read_channel_percent(RUD_CHANNEL) / 10.0; // low rates!
   int flight_mode = switch_position(read_channel_percent(MODE_CHANNEL));
-
+  // TODO: when initialized, dont do anything until THR stick down
   // TODO: on angle read, normalize to 360 degrees?
   float raw_angle = mpu.getAngleZ();
+  if (raw_angle < -180)
+    raw_angle += 360;
+  else if (raw_angle > 180)
+    raw_angle -= 360;
   float current_angle = gyroz_filter.updateEstimate(raw_angle);
 
   int m1;
@@ -110,28 +114,41 @@ void loop() {
 
   // TODO: tidy up where pid vars go
   // TODO: make pid vars tunable/displayable by bluetooth
-  // TODO: when initialized, dont do anything until THR stick down
   static float pCoefficient = .2;
-  static float dCoefficient = .02;
+  static float iCoefficient = .02;
+  static float dCoefficient = .1;
+  static float last_err;
   static float accumulated_error = 0;
   float err = target_angle - current_angle;
   if (abs(err) > 1.0)
     accumulated_error += err;
   float pCorrection = pCoefficient * err;
-  float dCorrection = dCoefficient * accumulated_error;
-
-  float total_correction = pCorrection + dCorrection;
-
+  float iCorrection = iCoefficient * accumulated_error;
+  float dCorrection = dCoefficient * (err / last_err);
+  float total_correction = pCorrection + iCorrection + dCorrection;
+  last_err = err;
+  
   float motor_delta = total_correction;
   
-  m1 = thr + rud - motor_delta/2;
-  m2 = thr - rud + motor_delta/2;
+  m1 = thr + rud - motor_delta/20;
+  m2 = thr - rud + motor_delta/20;
 
-  static int pcount;
-  pcount++;
-  if (1 && pcount > 10) {
-    pcount = 0;
-    //MONITOR(target_angle);
+  if (Serial.available()) {
+    byte k = Serial.read();
+    switch (k) {
+    case 'q': pCoefficient += .01; break;
+    case 'a': pCoefficient -= .01; break;
+    case 'w': iCoefficient += .01; break;
+    case 's': iCoefficient -= .01; break;
+    case 'e': dCoefficient += .01; break;
+    case 'd': dCoefficient -= .01; break;
+    }
+  }
+  if (1) {
+    //MONITOR(pCoefficient);
+    //MONITOR(iCoefficient);
+    MONITOR(target_angle);
+    MONITOR(raw_angle);
     MONITOR(current_angle);
     //MONITOR(err);
     //MONITOR(pCorrection);
@@ -143,7 +160,7 @@ void loop() {
     //MONITOR(m2);
     Serial.println("");
     // do we need extra time to handle graphing?
-    delay(50);
+    //delay(50);
   }
 
   // middle pos = manual flight mode
