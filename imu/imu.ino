@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include "imu.h"
-#include "tiny_kalman.h"
+#include "kalman.h"
 
 
 #include "Wire.h"
@@ -15,7 +15,7 @@ void setup() {
   
 }
 
-SimpleKalmanFilter myfilter(2, 2, 0.9);
+Kalman1d myfilter(2, 2, 0.9);
 
 #define P(x) Serial.print(x)
 

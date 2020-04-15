@@ -3,6 +3,6 @@ cp ppm/ppm.{cpp,h} mixer
 cp ppm/ppm.{cpp,h} openhover
 cp ppm/ppm.{cpp,h} esc_tuner
 cp imu/imu.{cpp,h} openhover
-cp tiny_kalman/tiny_kalman.h openhover
-cp tiny_kalman/tiny_kalman.h ppm
-cp tiny_kalman/tiny_kalman.h imu
+cp kalman/kalman.h openhover
+cp kalman/kalman.h ppm
+cp kalman/kalman.h imu

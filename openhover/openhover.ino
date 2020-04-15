@@ -3,7 +3,7 @@
 #include <Servo.h>
 #include "imu.h"
 #include "ppm.h"
-#include "tiny_kalman.h"
+#include "kalman.h"
 
 // Configuration stuff.
 
@@ -86,7 +86,7 @@ void setup() {
 // loop() persistent data
 
 float target_angle = 0.0;
-SimpleKalmanFilter gyroz_filter(2, 2, 0.15);
+Kalman1d gyroz_filter(2, 2, 0.15);
 
 // TODO: move all vars out or in
 

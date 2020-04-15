@@ -1,4 +1,4 @@
-#include "tiny_kalman.h"
+#include "kalman.h"
 
 void setup() {
   Serial.begin(115200);
@@ -10,8 +10,8 @@ void setup() {
 const long SERIAL_REFRESH_TIME = 100;
 long refresh_time;
 
-SimpleKalmanFilter myfilter(2, 2, 0.01);
-SimpleKalmanFilter myfilter2(2, 2, 0.01);
+Kalman1d myfilter(2, 2, 0.01);
+Kalman1d myfilter2(2, 2, 0.01);
 void loop() {
   float real_value = analogRead(A0)/1024.0 * 100.0;
   float measured_value = real_value + random(-100,100)/100.0;
