@@ -114,18 +114,18 @@ void loop() {
 
   // TODO: tidy up where pid vars go
   // TODO: make pid vars tunable/displayable by bluetooth
-  static float pCoefficient = .2;
-  static float iCoefficient = .02;
-  static float dCoefficient = .1;
+  static float pCoef = .2;
+  static float iCoef = .02;
+  static float dCoef = .1;
   static float last_err;
   static float accumulated_error = 0;
   float err = target_angle - current_angle;
   if (abs(err) > 1.0)
     accumulated_error += err;
-  float pCorrection = pCoefficient * err;
-  float iCorrection = iCoefficient * accumulated_error;
-  float dCorrection = dCoefficient * (err / last_err);
-  float total_correction = pCorrection + iCorrection + dCorrection;
+  float pCorr = pCoef * err;
+  float iCorr = iCoef * accumulated_error;
+  float dCorr = dCoef * (err / last_err);
+  float total_correction = pCorr + iCorr + dCorr;
   last_err = err;
   
   float motor_delta = total_correction;
@@ -133,28 +133,34 @@ void loop() {
   m1 = thr + rud - motor_delta/20;
   m2 = thr - rud + motor_delta/20;
 
-  if (Serial.available()) {
+  if (1 && Serial.available()) {
     byte k = Serial.read();
     switch (k) {
-    case 'q': pCoefficient += .01; break;
-    case 'a': pCoefficient -= .01; break;
-    case 'w': iCoefficient += .01; break;
-    case 's': iCoefficient -= .01; break;
-    case 'e': dCoefficient += .01; break;
-    case 'd': dCoefficient -= .01; break;
-    }
+    case 'q': pCoef += .1; break;
+    case 'a': pCoef -= .01; break;
+    case 'w': iCoef += .01; break;
+    case 's': iCoef -= .01; break;
+    case 'e': dCoef += .01; break;
+    case 'd': dCoef -= .01; break;
+
+    case 'z': pCoef = Serial.parseFloat(); break;
+    case 'x': iCoef = Serial.parseFloat(); break;
+    case 'c': dCoef = Serial.parseFloat(); break;
+}
   }
   if (1) {
-    //MONITOR(pCoefficient);
-    //MONITOR(iCoefficient);
-    MONITOR(target_angle);
-    MONITOR(raw_angle);
-    MONITOR(current_angle);
-    //MONITOR(err);
-    //MONITOR(pCorrection);
-    //MONITOR(dCorrection);
+    MONITOR(err);
+    MONITOR(pCoef);
+    MONITOR(iCoef);
+    MONITOR(dCoef);
+    //MONITOR(target_angle);
+    //MONITOR(raw_angle);
+    //MONITOR(current_angle);
+    MONITOR(pCorr);
+    MONITOR(iCorr);
+    MONITOR(dCorr);
     //MONITOR(accumulated_error);
-    //MONITOR(total_correction);
+    MONITOR(total_correction);
     //MONITOR(motor_delta);
     //MONITOR(m1);
     //MONITOR(m2);
