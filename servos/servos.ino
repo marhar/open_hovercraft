@@ -8,7 +8,7 @@ Servo s3;
 
 void setup() {
   setup_ppm();
-  Serial.begin(115200);
+  Serial.begin(9600);
   s1.attach(9);
   s2.attach(10);
   s3.attach(11);

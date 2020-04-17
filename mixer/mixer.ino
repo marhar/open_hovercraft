@@ -8,7 +8,7 @@ Servo s1;
 Servo s2;
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   setup_ppm();
   setup_mixer();
   s1.attach(9);

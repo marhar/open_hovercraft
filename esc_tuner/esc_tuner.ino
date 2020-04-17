@@ -24,7 +24,7 @@ void x_lmotor(int x) { setmotor(s_lmotor,x); setmotor(s_lmonitor, x); }
 void x_rmotor(int x) { setmotor(s_rmotor,x); setmotor(s_rmonitor, x); }
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
   setup_ppm();

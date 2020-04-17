@@ -1,7 +1,7 @@
 #include "kalman.h"
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
 }
 
 #define P(x) Serial.print(x)
