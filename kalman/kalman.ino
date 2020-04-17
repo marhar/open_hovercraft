@@ -1,11 +1,9 @@
+#include <ArduinoMonitor.h>
 #include "kalman.h"
 
 void setup() {
   Serial.begin(9600);
 }
-
-#define P(x) Serial.print(x)
-#define MON(n,v) Serial.print(F(n)); Serial.print(v); Serial.print(' ');
 
 const long SERIAL_REFRESH_TIME = 100;
 long refresh_time;
@@ -18,15 +16,12 @@ void loop() {
   float estimated_value = myfilter.updateEstimate(measured_value);
   float estimated_value2 = myfilter.updateEstimate(real_value);
 
-  // send to Serial output every 100ms
-  // use the Serial Ploter for a good visualization
   if (millis() > refresh_time) {
-    MON("real:",  real_value);
-    MON("measured:", measured_value);
-    MON("estimated:", estimated_value);
-    MON("estimated2:", estimated_value2);
-    Serial.println();
-    
+    MONITOR(real_value);
+    MONITOR(measured_value);
+    MONITOR(estimated_value);
+    MONITOR(estimated_value2);
+    MONITOR_ENDL();
     refresh_time = millis() + SERIAL_REFRESH_TIME;
   }
 

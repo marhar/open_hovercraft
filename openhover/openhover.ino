@@ -1,6 +1,7 @@
 // OpenHover
 
 #include <Servo.h>
+#include <ArduinoMonitor.h>
 #include "imu.h"
 #include "ppm.h"
 #include "kalman.h"
@@ -17,10 +18,6 @@
 #define LOOP_HERTZ 50
 
 enum { SWITCH_UP = 1, SWITCH_MIDDLE, SWITCH_DOWN };
-
-// output a value in plotter-compatible format. usage: MONITOR(x);
-#define MONITOR(v) Serial.print(" " #v ":"); Serial.print(v)
-#define MONITOR2(name, v) Serial.print(" " name ":"); Serial.print(v)
 
 // Outputs.
 
@@ -164,9 +161,7 @@ void loop() {
     //MONITOR(motor_delta);
     //MONITOR(m1);
     //MONITOR(m2);
-    Serial.println("");
-    // do we need extra time to handle graphing?
-    //delay(50);
+    MONITOR_ENDL();
   }
 
   // middle pos = manual flight mode

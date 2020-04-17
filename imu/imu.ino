@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <ArduinoMonitor.h>
 #include "imu.h"
 #include "kalman.h"
 
@@ -17,27 +18,18 @@ void setup() {
 
 Kalman1d myfilter(2, 2, 0.9);
 
-#define P(x) Serial.print(x)
-
-#ifndef NO_MONITOR
-#define MONITOR(v) Serial.print(F(" " #v ":")); Serial.print(v)
-#define MONITOR2(n, v) Serial.print(F(" " n ":")); Serial.print(v)
-#define MONITOR_END Serial.println()
-#endif
-
 float estimated_az = 0;
 void loop() {
   float az = mpu.getAngleZ();
   estimated_az = myfilter.updateEstimate(az);
   mpu.update();
-  delay(100);
-  //MONITOR("ACCEL\t"));P(mpu.getAccX());
-  //MONITOR("\t"));P(mpu.getAccY());
-  //MONITOR("\t"));P(mpu.getAccZ());
-  //MONITOR("\tANGLE\t"));P(mpu.getAngleX());
-  //MONITOR("\t"));P(mpu.getAngleY());
-  //MONITOR("\t"));PL(mpu.getAngleZ());
+  //MONITOR2("AccX", mpu.getAccX());
+  //MONITOR2("AccY", mpu.getAccY());
+  //MONITOR2("AccZ", mpu.getAccZ());
+  //MONITOR2("AngX", mpu.getAngleX());
+  //MONITOR2("AngY", mpu.getAngleY());
+  //MONITOR2("AngZ", mpu.getAngleZ());
   MONITOR(az);
   MONITOR(estimated_az);
-  Serial.println();
+  MONITOR_ENDL();
 }

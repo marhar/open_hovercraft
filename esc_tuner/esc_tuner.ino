@@ -1,6 +1,7 @@
 // Tune the ESCs
 
 #include <Servo.h>
+#include <ArduinoMonitor.h>
 #include "ppm.h"
 
 Servo s_lmotor;
@@ -39,17 +40,10 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
 }
 
-// output a value in plotter-compatible format. usage: MON("x:", x);
-#define P(x) Serial.print(x)
-#define MON(n, v) P('\t'); P(F(n)); P(v);
-
 #define THR_CHAN 3
 void loop() {
   int thr = read_channel_time(THR_CHAN);
-  if (1) {
-    MON("thr:", thr);
-    P('\n');
-  }
+  MONITOR(thr);
   x_lmotor(thr);
   x_rmotor(thr);
   delay(100);
