@@ -34,8 +34,8 @@ void setmotor(Servo &s, int v, int reverse=0) {
     v = MIN_SERVO;
   else if (v > MAX_SERVO)
     v = MAX_SERVO;
-  //if (reverse)
-  //  v = MAX_SERVO - v;
+  if (reverse)
+    v = MAX_SERVO - (v - MIN_SERVO);
   s.write(v);
 }
 
@@ -62,7 +62,7 @@ float smooth(float x, float new_x, int nsamples) {
 void setup() {
   // Turn on blue LED while in setup.
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, HIGH);
+  digitalWrite(LED_BUILTIN, HIGH);   // led on, setup started
 
   Serial.begin(9600);
   //setup_servo();
@@ -76,7 +76,8 @@ void setup() {
   x_lifter(0);
   setup_ppm();
   setup_imu();
-  digitalWrite(LED_BUILTIN, LOW);
+  mpu.setGyroOffsets(0, 0, 0);
+  digitalWrite(LED_BUILTIN, LOW);  // led off, finished setup
 }
 
 
@@ -91,7 +92,7 @@ void loop() {
   uint32_t now = micros();
   uint32_t wait_until = now + 1000000/LOOP_HERTZ;
   mpu.update();
-
+  
   // TODO: make this configurable?
   // TODO: can we nuke floats from channels?
   float thr = read_channel_percent(THR_CHANNEL);
@@ -145,6 +146,7 @@ void loop() {
     case 'c': dCoef = Serial.parseFloat(); break;
 }
   }
+  // TODO: add plot mode activated by switch or serial command
   if (1) {
     MONITOR(err);
     MONITOR(pCoef);
