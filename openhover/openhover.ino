@@ -6,14 +6,21 @@
 #include "ppm.h"
 #include "kalman.h"
 
+
+// TX Settings:
+//  Ch 3.  Thr
+//  Ch 4.  Rud
+//  Ch 5.  S1    lift motor
+//  Ch 6.  SD    flight mode gyro/manual/off
+
 // Configuration stuff.
 
 #define MIN_SERVO 1000
 #define MAX_SERVO 2000
-
 #define THR_CHANNEL 3
 #define RUD_CHANNEL 4
-#define MODE_CHANNEL 8    // TODO change to 6
+#define LIFT_CHANNEL 5
+#define MODE_CHANNEL 6
 
 #define LOOP_HERTZ 50
 
@@ -80,11 +87,14 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);  // led off, finished setup
 }
 
-
 // loop() persistent data
 
 float target_angle = 0.0;
 Kalman1d gyroz_filter(2, 2, 0.15);
+
+enum {STRAIGHT = 1, TURNING, STOPPED};
+int action_state = STOPPED;
+#define DEAD_WIDTH 5                // width in percent of rudder dead zone
 
 // TODO: move all vars out or in
 
@@ -96,20 +106,19 @@ void loop() {
   // TODO: make this configurable?
   // TODO: can we nuke floats from channels?
   float thr = read_channel_percent(THR_CHANNEL);
-  float rud = read_channel_percent(RUD_CHANNEL) / 10.0; // low rates!
+  float rud = read_channel_percent(RUD_CHANNEL) / 1.0; // add low rates?
+  float lifter = read_channel_percent(LIFT_CHANNEL);
   int flight_mode = switch_position(read_channel_percent(MODE_CHANNEL));
   // TODO: when initialized, dont do anything until THR stick down
   // TODO: on angle read, normalize to 360 degrees?
   float raw_angle = mpu.getAngleZ();
-  if (raw_angle < -180)
-    raw_angle += 360;
-  else if (raw_angle > 180)
-    raw_angle -= 360;
   float current_angle = gyroz_filter.updateEstimate(raw_angle);
 
-  int m1;
-  int m2;
+  int m1;  // motor 1 -- left thrust
+  int m2;  // motor 2 -- right thrust
+  int m3;  // motor 3 -- lifter
 
+  m3 = lifter;
   // TODO: tidy up where pid vars go
   // TODO: make pid vars tunable/displayable by bluetooth
   static float pCoef = .2;
@@ -118,8 +127,7 @@ void loop() {
   static float last_err;
   static float accumulated_error = 0;
   float err = target_angle - current_angle;
-  if (abs(err) > 1.0)
-    accumulated_error += err;
+  accumulated_error += err;
   float pCorr = pCoef * err;
   float iCorr = iCoef * accumulated_error;
   float dCorr = dCoef * (err / last_err);
@@ -148,7 +156,6 @@ void loop() {
   }
   // TODO: add plot mode activated by switch or serial command
   if (1) {
-    MONITOR(err);
     MONITOR(pCoef);
     MONITOR(iCoef);
     MONITOR(dCoef);
@@ -158,8 +165,9 @@ void loop() {
     MONITOR(pCorr);
     MONITOR(iCorr);
     MONITOR(dCorr);
+    MONITOR(err);
     //MONITOR(accumulated_error);
-    MONITOR(total_correction);
+    //MONITOR(total_correction);
     //MONITOR(motor_delta);
     //MONITOR(m1);
     //MONITOR(m2);
@@ -167,7 +175,7 @@ void loop() {
   }
 
   // middle pos = manual flight mode
-  if (flight_mode == SWITCH_MIDDLE) {
+  if (action_state == TURNING || flight_mode == SWITCH_MIDDLE) {
     m1 = thr + rud;
     m2 = thr - rud;
   }
@@ -175,16 +183,19 @@ void loop() {
   // bottom pos = stop everything
   if (flight_mode == SWITCH_DOWN || thr < -98) {
     // if throttle is off, lets reset some stuff
-    m1 = m2 = -100;  // force motors off
+    m1 = m2 = -100;  // force thrust motors off
+    action_state = STOPPED;
     target_angle = current_angle;  // set new target angle  //?REDO
     accumulated_error = 0;  //?REDO
   }
 
   x_lmotor(map(m1, -100, 100, MIN_SERVO, MAX_SERVO));
   x_rmotor(map(m2, -100, 100, MIN_SERVO, MAX_SERVO));
+  x_lifter(map(m3, -100, 100, MIN_SERVO, MAX_SERVO));
 
-  while (micros() < wait_until) {
-  }
+  MONITOR2("wait", micros() - wait_until);
+  //while (micros() < wait_until) {
+  //}
 }
 
 /*
