@@ -1,5 +1,7 @@
 // OpenHover
-// get ArrbotMonitor from 
+// get ArrbotMonitor from https://github.com/marhar/ArrbotMonitor
+//     baud      pgm int    hz
+//    57600  monitor usb   227
 
 #include <Servo.h>
 #include <ArrbotMonitor.h>
@@ -70,7 +72,7 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);   // led on, setup started
 
-  Serial.begin(9600);
+  Serial.begin(57600);
   //setup_servo();
   s_lmotor.attach(3);
   s_rmotor.attach(9);
@@ -157,13 +159,15 @@ void loop() {
     case 'p': pCoef = Serial.parseFloat(); break;
     case 'i': iCoef = Serial.parseFloat(); break;
     case 'd': dCoef = Serial.parseFloat(); break;
-    case 'w': watcher = Serial.read(); break;
+    // TODO: figure out character read so wl, wp will work
+    case 'w': watcher = Serial.parseInt(); break;
+    case 'b': Serial.begin(Serial.parseInt()); break; // doesn't work?
 }
   }
   // TODO: figure out good command for w[1234]
   // w1=pid w2 = motors w3=sensors w4=channels
   switch (watcher) {
-  case 'p':  // PID loop
+  case 1://'p':  // PID loop
     DISPLAY(pCoef);
     DISPLAY(iCoef);
     DISPLAY(dCoef);
@@ -175,18 +179,18 @@ void loop() {
     DISPLAY(err);
     MONITOR_ENDL();
     break;
-  case 'm':  // motors
+  case 2://'m':  // motors
     MONITOR(m1);
     MONITOR(m2);
     MONITOR(m3);
     MONITOR_ENDL();
     break;
-  case 's':  // sensors
+  case 3://'s':  // sensors
     MONITOR(raw_angle);
     MONITOR(current_angle);
     MONITOR_ENDL();
     break;
-  case 'c':  // RC Channels
+  case 4://'c':  // RC Channels
     MONITOR2("ch1", read_channel_percent(1));
     MONITOR2("ch2", read_channel_percent(2));
     MONITOR2("ch3", read_channel_percent(3));
@@ -197,7 +201,7 @@ void loop() {
     MONITOR2("ch8", read_channel_percent(8));
     MONITOR_ENDL();
     break;
-  case 'l':  // loop stats
+  case 5://'l':  // loop stats
     DISPLAY(loop_hz);
     MONITOR(loop_hz);
     MONITOR_ENDL();
@@ -225,20 +229,3 @@ void loop() {
 
   // TODO: do we want to re-add rate limiting here?
 }
-
-/*
-pVal = 10
-iVal = .5
-dVal = .2
-loop
-  read currVal
-  err = target - currVal
-  slope = error - lastErr
-  pCorrection = pVal * error
-  iCorr = iVal * cumError
-  dCorr = dVal * slope
-  cumError += error
-  lastErr = err
-  corr = pCorr + iCorr + dCorr
-  emit(correction)
-*/
