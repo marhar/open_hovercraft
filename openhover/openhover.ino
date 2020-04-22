@@ -3,6 +3,8 @@
 //     baud      pgm int    hz
 //    57600  monitor usb   227
 
+#define BAUD 9600
+
 #include <Servo.h>
 #include <ArrbotMonitor.h>
 #include "imu.h"
@@ -72,7 +74,7 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);   // led on, setup started
 
-  Serial.begin(57600);
+  Serial.begin(BAUD);
   //setup_servo();
   s_lmotor.attach(3);
   s_rmotor.attach(9);
@@ -95,7 +97,7 @@ uint32_t old_sec;
 uint32_t loop_count;
 int loop_hz;
 
-int watcher = 'p';    // watch mode
+int watcher = 0;    // watch mode -- start off quiet
 float target_angle = 0.0;
 Kalman1d gyroz_filter(2, 2, 0.15);
 
@@ -166,17 +168,21 @@ void loop() {
   }
   // TODO: figure out good command for w[1234]
   // w1=pid w2 = motors w3=sensors w4=channels
+  static int watch_count = 0;
+  watch_count++;
+  if (watch_count > 10) {
+    watch_count = 0;
   switch (watcher) {
   case 1://'p':  // PID loop
-    DISPLAY(pCoef);
-    DISPLAY(iCoef);
-    DISPLAY(dCoef);
-    MONITOR(pCorr);
-    MONITOR(iCorr);
-    MONITOR(dCorr);
-    MONITOR(total_correction);
-    MONITOR(err);
-    DISPLAY(err);
+    DISPLAY2("hz", loop_hz);
+    DISPLAY2("p", pCoef);
+    DISPLAY2("i", iCoef);
+    DISPLAY2("d", dCoef);
+    MONITOR2("pc", pCorr);
+    MONITOR2("ic", iCorr);
+    MONITOR2("dc", dCorr);
+    MONITOR2("t", total_correction);
+    MONITOR2("e", err);
     MONITOR_ENDL();
     break;
   case 2://'m':  // motors
@@ -207,6 +213,8 @@ void loop() {
     MONITOR_ENDL();
     break;
   }
+  }
+
 
   // middle pos = manual flight mode
   if (action_state == TURNING || flight_mode == SWITCH_MIDDLE) {
