@@ -44,7 +44,7 @@ void setup() {
 void loop() {
   int thr = read_channel_time(THR_CHAN);
   MONITOR(thr);
+  MONITOR_ENDL();
   x_lmotor(thr);
   x_rmotor(thr);
-  delay(100);
 }

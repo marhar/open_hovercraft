@@ -1,6 +1,5 @@
 # stupid hack to get around arduino env weirdnesses
 a="
- mixer/ppm.{cpp,h}
  openhover/ppm.{cpp,h}
  openhover/imu.{cpp,h}
  esc_tuner/ppm.{cpp,h}
