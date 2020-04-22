@@ -1,7 +1,8 @@
 // OpenHover
+// get ArrbotMonitor from 
 
 #include <Servo.h>
-#include <ArduinoMonitor.h>
+#include <ArrbotMonitor.h>
 #include "imu.h"
 #include "ppm.h"
 #include "kalman.h"
@@ -21,8 +22,6 @@
 #define RUD_CHANNEL 4
 #define LIFT_CHANNEL 5
 #define MODE_CHANNEL 6
-
-#define LOOP_HERTZ 50
 
 enum { SWITCH_UP = 1, SWITCH_MIDDLE, SWITCH_DOWN };
 
@@ -89,6 +88,12 @@ void setup() {
 
 // loop() persistent data
 
+uint32_t last_now;
+uint32_t loop_count;
+uint32_t last_second;
+uint32_t loop_hz;
+
+int watcher = 'p';    // watch mode
 float target_angle = 0.0;
 Kalman1d gyroz_filter(2, 2, 0.15);
 
@@ -99,8 +104,16 @@ int action_state = STOPPED;
 // TODO: move all vars out or in
 
 void loop() {
+  loop_count++;
   uint32_t now = micros();
-  uint32_t wait_until = now + 1000000/LOOP_HERTZ;
+  uint32_t elapsed = now - last_now;  // TODO: fix wrap
+  if (now > last_second + 1000000) {
+    // one second click
+    loop_hz = loop_count;
+    loop_count = 0;
+    last_second = now;
+  }
+  last_now = now;
   mpu.update();
   
   // TODO: make this configurable?
@@ -120,58 +133,79 @@ void loop() {
 
   m3 = lifter;
   // TODO: tidy up where pid vars go
-  // TODO: make pid vars tunable/displayable by bluetooth
-  static float pCoef = .2;
-  static float iCoef = .02;
+  static float pCoef = 20;
+  static float iCoef = .05;
   static float dCoef = .1;
+  
   static float last_err;
   static float accumulated_error = 0;
   float err = target_angle - current_angle;
   accumulated_error += err;
-  float pCorr = pCoef * err;
-  float iCorr = iCoef * accumulated_error;
-  float dCorr = dCoef * (err / last_err);
+  float pCorr = pCoef/100.0 * err;
+  float iCorr = iCoef/100.0 * accumulated_error;
+  float dCorr = dCoef/100.0 * (err / last_err);
   float total_correction = pCorr + iCorr + dCorr;
   last_err = err;
   
   float motor_delta = total_correction;
-  
-  m1 = thr + rud - motor_delta/20;
-  m2 = thr - rud + motor_delta/20;
+
+// TODO: figure out what MOTOR_DELTA_DIVISOR means
+#define MOTOR_DELTA_DIVISOR 20
+  m1 = thr + rud - motor_delta/MOTOR_DELTA_DIVISOR;
+  m2 = thr - rud + motor_delta/MOTOR_DELTA_DIVISOR;
 
   if (1 && Serial.available()) {
     byte k = Serial.read();
     switch (k) {
-    case 'q': pCoef += .1; break;
-    case 'a': pCoef -= .01; break;
-    case 'w': iCoef += .01; break;
-    case 's': iCoef -= .01; break;
-    case 'e': dCoef += .01; break;
-    case 'd': dCoef -= .01; break;
-
-    case 'z': pCoef = Serial.parseFloat(); break;
-    case 'x': iCoef = Serial.parseFloat(); break;
-    case 'c': dCoef = Serial.parseFloat(); break;
+    case 'p': pCoef = Serial.parseFloat(); break;
+    case 'i': iCoef = Serial.parseFloat(); break;
+    case 'd': dCoef = Serial.parseFloat(); break;
+    case 'w': watcher = Serial.read(); break;
 }
   }
-  // TODO: add plot mode activated by switch or serial command
-  if (1) {
-    MONITOR(pCoef);
-    MONITOR(iCoef);
-    MONITOR(dCoef);
-    //MONITOR(target_angle);
-    //MONITOR(raw_angle);
-    //MONITOR(current_angle);
+  // TODO: figure out good command for w[1234]
+  // w1=pid w2 = motors w3=sensors w4=channels
+  switch (watcher) {
+  case 'p':  // PID loop
+    DISPLAY(pCoef);
+    DISPLAY(iCoef);
+    DISPLAY(dCoef);
     MONITOR(pCorr);
     MONITOR(iCorr);
     MONITOR(dCorr);
+    MONITOR(total_correction);
     MONITOR(err);
-    //MONITOR(accumulated_error);
-    //MONITOR(total_correction);
-    //MONITOR(motor_delta);
-    //MONITOR(m1);
-    //MONITOR(m2);
+    DISPLAY(err);
     MONITOR_ENDL();
+    break;
+  case 'm':  // motors
+    MONITOR(m1);
+    MONITOR(m2);
+    MONITOR(m3);
+    MONITOR_ENDL();
+    break;
+  case 's':  // sensors
+    MONITOR(raw_angle);
+    MONITOR(current_angle);
+    MONITOR_ENDL();
+    break;
+  case 'c':  // RC Channels
+    MONITOR2("ch1", read_channel_percent(1));
+    MONITOR2("ch2", read_channel_percent(2));
+    MONITOR2("ch3", read_channel_percent(3));
+    MONITOR2("ch4", read_channel_percent(4));
+    MONITOR2("ch5", read_channel_percent(5));
+    MONITOR2("ch6", read_channel_percent(6));
+    MONITOR2("ch7", read_channel_percent(7));
+    MONITOR2("ch8", read_channel_percent(8));
+    MONITOR_ENDL();
+    break;
+  case 'l':  // loop stats
+    DISPLAY(elapsed);
+    DISPLAY(loop_hz);
+    MONITOR(elapsed);
+    MONITOR_ENDL();
+    break;
   }
 
   // middle pos = manual flight mode
@@ -193,38 +227,22 @@ void loop() {
   x_rmotor(map(m2, -100, 100, MIN_SERVO, MAX_SERVO));
   x_lifter(map(m3, -100, 100, MIN_SERVO, MAX_SERVO));
 
-  MONITOR2("wait", micros() - wait_until);
-  //while (micros() < wait_until) {
-  //}
+  // TODO: do we want to re-add rate limiting here?
 }
 
 /*
-pVal * current_error
-
-pVal
-iVal
-dVal
-terget
-cumErr
-maxCorr = 100% power
-minCorr = 15% power
-target = 100   set point
+pVal = 10
+iVal = .5
+dVal = .2
 loop
   read currVal
   err = target - currVal
-  
-  pCorrection = pVal * error
-  
-  cumError += error
-  iCorr = iVal * cumError
-  
   slope = error - lastErr
+  pCorrection = pVal * error
+  iCorr = iVal * cumError
   dCorr = dVal * slope
+  cumError += error
   lastErr = err
-
   corr = pCorr + iCorr + dCorr
-  if (corr > maxCorr) corr = maxCorr
-  if (corr < minCorr) corr = minCorr
-
   emit(correction)
 */
