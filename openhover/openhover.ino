@@ -88,10 +88,10 @@ void setup() {
 
 // loop() persistent data
 
-uint32_t last_now;
+// loop stats
+uint32_t old_sec;
 uint32_t loop_count;
-uint32_t last_second;
-uint32_t loop_hz;
+int loop_hz;
 
 int watcher = 'p';    // watch mode
 float target_angle = 0.0;
@@ -104,16 +104,13 @@ int action_state = STOPPED;
 // TODO: move all vars out or in
 
 void loop() {
-  loop_count++;
   uint32_t now = micros();
-  uint32_t elapsed = now - last_now;  // TODO: fix wrap
-  if (now > last_second + 1000000) {
-    // one second click
+  ++loop_count;
+  if (now >= old_sec + 1000000) {
+    old_sec = now;
     loop_hz = loop_count;
     loop_count = 0;
-    last_second = now;
   }
-  last_now = now;
   mpu.update();
   
   // TODO: make this configurable?
@@ -201,9 +198,8 @@ void loop() {
     MONITOR_ENDL();
     break;
   case 'l':  // loop stats
-    DISPLAY(elapsed);
     DISPLAY(loop_hz);
-    MONITOR(elapsed);
+    MONITOR(loop_hz);
     MONITOR_ENDL();
     break;
   }
