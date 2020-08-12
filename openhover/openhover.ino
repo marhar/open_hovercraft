@@ -33,7 +33,7 @@ enum { SWITCH_UP = 1, SWITCH_MIDDLE, SWITCH_DOWN };
 
 Servo s_lmotor;
 Servo s_rmotor;
-Servo s_lifter;
+int s_lifter;
 Servo s_lmonitor;
 Servo s_rmonitor;
 
@@ -51,7 +51,14 @@ void setmotor(Servo &s, int v, int reverse=0) {
 
 void x_lmotor(int x) { setmotor(s_lmotor,x); setmotor(s_lmonitor, x, 1); }
 void x_rmotor(int x) { setmotor(s_rmotor,x); setmotor(s_rmonitor, x); }
-void x_lifter(int x) { setmotor(s_lifter,x); }
+void x_lifter(int x) { 
+  if (x == SWITCH_UP) {
+    digitalWrite(s_lifter,HIGH);
+    }
+  else {
+    digitalWrite(s_lifter,LOW); 
+  }
+}
 
 // Some input stuff.
 
@@ -73,6 +80,7 @@ void setup() {
   // Turn on blue LED while in setup.
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);   // led on, setup started
+  pinMode(10,OUTPUT);
 
   Serial.begin(BAUD);
   //setup_servo();
@@ -80,10 +88,10 @@ void setup() {
   s_rmotor.attach(9);
   s_lmonitor.attach(A1);
   s_rmonitor.attach(A2);
-  s_lifter.attach(10);
+  s_lifter = 10;
   x_lmotor(0);
   x_rmotor(0);
-  x_lifter(0);
+  x_lifter(SWITCH_DOWN);
   setup_ppm();
   setup_imu();
   mpu.setGyroOffsets(0, 0, 0);
@@ -121,7 +129,7 @@ void loop() {
   // TODO: can we nuke floats from channels?
   float thr = read_channel_percent(THR_CHANNEL);
   float rud = read_channel_percent(RUD_CHANNEL) / 1.0; // add low rates?
-  float lifter = read_channel_percent(LIFT_CHANNEL);
+  int lifter = switch_position(read_channel_percent(LIFT_CHANNEL));
   int flight_mode = switch_position(read_channel_percent(MODE_CHANNEL));
   // TODO: when initialized, dont do anything until THR stick down
   // TODO: on angle read, normalize to 360 degrees?
@@ -233,7 +241,7 @@ void loop() {
 
   x_lmotor(map(m1, -100, 100, MIN_SERVO, MAX_SERVO));
   x_rmotor(map(m2, -100, 100, MIN_SERVO, MAX_SERVO));
-  x_lifter(map(m3, -100, 100, MIN_SERVO, MAX_SERVO));
+  x_lifter(lifter);
 
   // TODO: do we want to re-add rate limiting here?
 }
