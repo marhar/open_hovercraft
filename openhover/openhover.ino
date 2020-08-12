@@ -127,8 +127,13 @@ void loop() {
   
   // TODO: make this configurable?
   // TODO: can we nuke floats from channels?
-  float thr = read_channel_percent(THR_CHANNEL);
-  float rud = read_channel_percent(RUD_CHANNEL) / 1.0; // add low rates?
+  float thr = (read_channel_percent(THR_CHANNEL)+100)/2;
+  float rud = ((read_channel_percent(RUD_CHANNEL)+100) / 200.0); // add low rates?
+  if (thr < 0) {
+    digitalWrite(LED_BUILTIN, HIGH);
+  } else {
+    digitalWrite(LED_BUILTIN, LOW);
+  }
   int lifter = switch_position(read_channel_percent(LIFT_CHANNEL));
   int flight_mode = switch_position(read_channel_percent(MODE_CHANNEL));
   // TODO: when initialized, dont do anything until THR stick down
@@ -160,8 +165,8 @@ void loop() {
 
 // TODO: figure out what MOTOR_DELTA_DIVISOR means
 #define MOTOR_DELTA_DIVISOR 20
-  m1 = thr + rud - motor_delta/MOTOR_DELTA_DIVISOR;
-  m2 = thr - rud + motor_delta/MOTOR_DELTA_DIVISOR;
+  m1 = thr + rud/2 - motor_delta/MOTOR_DELTA_DIVISOR;
+  m2 = thr - rud/2 + motor_delta/MOTOR_DELTA_DIVISOR;
 
   if (1 && Serial.available()) {
     byte k = Serial.read();
@@ -226,8 +231,8 @@ void loop() {
 
   // middle pos = manual flight mode
   if (action_state == TURNING || flight_mode == SWITCH_MIDDLE) {
-    m1 = thr + rud;
-    m2 = thr - rud;
+    m1 = thr*rud-100;
+    m2 = thr*(1-rud)-100;
   }
 
   // bottom pos = stop everything
