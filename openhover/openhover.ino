@@ -33,7 +33,7 @@ enum { SWITCH_UP = 1, SWITCH_MIDDLE, SWITCH_DOWN };
 
 Servo s_lmotor;
 Servo s_rmotor;
-Servo s_lifter;
+int s_lifter;
 Servo s_lmonitor;
 Servo s_rmonitor;
 
@@ -51,18 +51,25 @@ void setmotor(Servo &s, int v, int reverse=0) {
 
 void x_lmotor(int x) { setmotor(s_lmotor,x); setmotor(s_lmonitor, x, 1); }
 void x_rmotor(int x) { setmotor(s_rmotor,x); setmotor(s_rmonitor, x); }
-void x_lifter(int x) { setmotor(s_lifter,x); }
+void x_lifter(int x) { 
+  if (x == SWITCH_UP) {
+    digitalWrite(s_lifter,HIGH);
+    }
+  else {
+    digitalWrite(s_lifter,LOW); 
+  }
+}
 
 // Some input stuff.
 
 int switch_position(int percentage) {
   // map a switch percentage to up/middle/down.
-  if (percentage > 50)
-    return SWITCH_DOWN;
-  else if (percentage > -50)
+  if (percentage < -50)
+    return SWITCH_UP;
+  else if (percentage < 50)
     return SWITCH_MIDDLE;
   else
-    return SWITCH_UP;
+    return SWITCH_DOWN;
 }
 
 float smooth(float x, float new_x, int nsamples) {
@@ -73,6 +80,8 @@ void setup() {
   // Turn on blue LED while in setup.
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);   // led on, setup started
+  pinMode(10,OUTPUT);
+  x_lifter(SWITCH_UP);
 
   Serial.begin(BAUD);
   //setup_servo();
@@ -80,10 +89,10 @@ void setup() {
   s_rmotor.attach(9);
   s_lmonitor.attach(A1);
   s_rmonitor.attach(A2);
-  s_lifter.attach(10);
+  s_lifter = 10;
   x_lmotor(0);
   x_rmotor(0);
-  x_lifter(0);
+
   setup_ppm();
   setup_imu();
   mpu.setGyroOffsets(0, 0, 0);
@@ -119,20 +128,19 @@ void loop() {
   
   // TODO: make this configurable?
   // TODO: can we nuke floats from channels?
-  float thr = read_channel_percent(THR_CHANNEL);
-  float rud = read_channel_percent(RUD_CHANNEL) / 1.0; // add low rates?
-  float lifter = read_channel_percent(LIFT_CHANNEL);
+  float thr = (read_channel_percent(THR_CHANNEL)+100)/2;
+  float rud = ((read_channel_percent(RUD_CHANNEL)+100) / 200.0); // add low rates?
+  int lifter_input = switch_position(read_channel_percent(LIFT_CHANNEL));
   int flight_mode = switch_position(read_channel_percent(MODE_CHANNEL));
   // TODO: when initialized, dont do anything until THR stick down
   // TODO: on angle read, normalize to 360 degrees?
   float raw_angle = mpu.getAngleZ();
   float current_angle = gyroz_filter.updateEstimate(raw_angle);
 
-  int m1;  // motor 1 -- left thrust
-  int m2;  // motor 2 -- right thrust
-  int m3;  // motor 3 -- lifter
+  int m1_output = -100;  // motor 1 -- left thrust, initialized at no thrust
+  int m2_output = -100;  // motor 2 -- right thrust, initialized at no thrust
+  int lifter_output = SWITCH_UP;  // motor 3 -- lifter
 
-  m3 = lifter;
   // TODO: tidy up where pid vars go
   static float pCoef = 20;
   static float iCoef = .05;
@@ -150,10 +158,7 @@ void loop() {
   
   float motor_delta = total_correction;
 
-// TODO: figure out what MOTOR_DELTA_DIVISOR means
-#define MOTOR_DELTA_DIVISOR 20
-  m1 = thr + rud - motor_delta/MOTOR_DELTA_DIVISOR;
-  m2 = thr - rud + motor_delta/MOTOR_DELTA_DIVISOR;
+
 
   if (1 && Serial.available()) {
     byte k = Serial.read();
@@ -186,9 +191,9 @@ void loop() {
     MONITOR_ENDL();
     break;
   case 2://'m':  // motors
-    MONITOR(m1);
-    MONITOR(m2);
-    MONITOR(m3);
+    MONITOR(m1_output);
+    MONITOR(m2_output);
+    MONITOR(lifter_output);
     MONITOR_ENDL();
     break;
   case 3://'s':  // sensors
@@ -215,25 +220,35 @@ void loop() {
   }
   }
 
+  //upper position = guided flight mode
+  if (flight_mode == SWITCH_UP) {
+    // TODO: figure out what MOTOR_DELTA_DIVISOR means
+  #define MOTOR_DELTA_DIVISOR 20
+    m1_output = thr*rud - 100 - motor_delta/MOTOR_DELTA_DIVISOR;
+    m2_output = thr*(1-rud) - 100 + motor_delta/MOTOR_DELTA_DIVISOR;
+    lifter_output = lifter_input;
+  }
 
   // middle pos = manual flight mode
   if (action_state == TURNING || flight_mode == SWITCH_MIDDLE) {
-    m1 = thr + rud;
-    m2 = thr - rud;
+    m1_output = thr*rud-100;
+    m2_output = thr*(1-rud)-100;
+    lifter_output = lifter_input;
   }
 
   // bottom pos = stop everything
   if (flight_mode == SWITCH_DOWN || thr < -98) {
     // if throttle is off, lets reset some stuff
-    m1 = m2 = -100;  // force thrust motors off
+    m1_output = m2_output = -100;  // force thrust motors off
+    lifter_output = SWITCH_UP;
     action_state = STOPPED;
     target_angle = current_angle;  // set new target angle  //?REDO
     accumulated_error = 0;  //?REDO
   }
 
-  x_lmotor(map(m1, -100, 100, MIN_SERVO, MAX_SERVO));
-  x_rmotor(map(m2, -100, 100, MIN_SERVO, MAX_SERVO));
-  x_lifter(map(m3, -100, 100, MIN_SERVO, MAX_SERVO));
+  x_lmotor(map(m1_output, -100, 100, MIN_SERVO, MAX_SERVO));
+  x_rmotor(map(m2_output, -100, 100, MIN_SERVO, MAX_SERVO));
+  x_lifter(lifter_output);
 
   // TODO: do we want to re-add rate limiting here?
 }
